@@ -19,6 +19,75 @@ namespace Xamarin.Forms.Build.Tasks
 {
 	class SetPropertiesVisitor : IXamlNodeVisitor
 	{
+		class Borrower
+		{
+			readonly ILContext _context;
+			readonly INode _node;
+
+			readonly Dictionary<string, (IEnumerable<Instruction>, FieldDefinition)> _dictionary =
+				new Dictionary<string, (IEnumerable<Instruction>, FieldDefinition)>();
+
+			public Borrower(ILContext context, INode node)
+			{
+				_context = context;
+				_node = node;
+			}
+
+			public (TypeReference, IEnumerable<Instruction>) ReserveByName(string name)
+			{
+				if (_dictionary.TryGetValue(name, out var cached))
+				{
+					return (cached.Item2.FieldType, new[]
+					{
+						Instruction.Create(OpCodes.Ldarg_0),
+						Instruction.Create(OpCodes.Ldfld, cached.Item2)
+					});
+				}
+
+				var variable = _context.FindByName(name, _node);
+				if (variable != null)
+					return ReserveByInstructions(name, variable.VariableType, new[] { Instruction.Create(OpCodes.Ldloc, variable) });
+
+				if (_context.ParentContextNamedFinder != null)
+				{
+					var (type, instructions) = _context.ParentContextNamedFinder.Invoke(name);
+
+					if (type != null || instructions != null)
+						return ReserveByInstructions(name, type, instructions);
+				}
+
+				return (null, null);
+			}
+
+			private (TypeReference, IEnumerable<Instruction>) ReserveByInstructions(string name, TypeReference type, IEnumerable<Instruction> instructions)
+			{
+				var field = new FieldDefinition($"nameScope_{name}", FieldAttributes.Assembly, type);
+
+				_dictionary.Add(name, (instructions, field));
+
+				return (type, new[]
+				{
+					Instruction.Create(OpCodes.Ldarg_0),
+					Instruction.Create(OpCodes.Ldfld, field)
+				});
+			}
+
+			public IEnumerable<Instruction> Borrow(TypeDefinition type)
+			{
+				foreach (var named in _dictionary.Values)
+				{
+					type.Fields.Add(named.Item2);
+
+					yield return Instruction.Create(OpCodes.Dup);
+
+					foreach (var instruction in named.Item1)
+						yield return instruction;
+
+					yield return Instruction.Create(OpCodes.Stfld, named.Item2);
+				}
+			}
+		}
+
 		static int dtcount;
 		static int typedBindingCount;
 
@@ -282,8 +351,44 @@ namespace Xamarin.Forms.Build.Tasks
 				if (arrayTypeRef != null)
 					yield return Instruction.Create(OpCodes.Castclass, module.ImportReference(arrayTypeRef.MakeArrayType()));
 				yield return Instruction.Create(OpCodes.Stloc, vardefref.VariableDefinition);
+				yield break;
 			}
-			else if (vardefref.VariableDefinition.VariableType.ImplementsGenericInterface("Xamarin.Forms.Xaml.IMarkupExtension`1",
+
+			if (vardefref.VariableDefinition.VariableType.FullName == "Xamarin.Forms.Xaml.ReferenceExtension")
+			{
+				if (!node.Properties.TryGetValue(new XmlName("", "Name"), out var nameNode) && node.CollectionItems.Count > 0)
+					nameNode = node.CollectionItems[0];
+
+				var nameValueNode = nameNode as ValueNode;
+				if (nameValueNode == null)
+					throw new XamlParseException("Name isn't set.", (IXmlLineInfo)node);
+
+				var name = nameValueNode.Value as string;
+				if (name == null)
+					throw new XamlParseException("Name isn't a string.", (IXmlLineInfo)node);
+
+				vardefref.VariableDefinition = context.FindByName(name, node);
+				if (vardefref.VariableDefinition != null)
+					yield break;
+
+				if (context.ParentContextNamedFinder != null)
+				{
+					var (type, instructions) = context.ParentContextNamedFinder.Invoke(name);
+
+					if (type != null || instructions != null)
+					{
+						vardefref.VariableDefinition = new VariableDefinition(type);
+
+						foreach (var instruction in instructions)
+							yield return instruction;
+
+						yield return Instruction.Create(OpCodes.Stloc, vardefref.VariableDefinition);
+						yield break;
+					}
+				}
+			}
+
+			if (vardefref.VariableDefinition.VariableType.ImplementsGenericInterface("Xamarin.Forms.Xaml.IMarkupExtension`1",
 				out markupExtension, out genericArguments))
 			{
 				var acceptEmptyServiceProvider = vardefref.VariableDefinition.VariableType.GetCustomAttribute(module, ("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "AcceptEmptyServiceProviderAttribute")) != null;
@@ -310,8 +415,10 @@ namespace Xamarin.Forms.Build.Tasks
 						yield return instruction;
 				yield return Instruction.Create(OpCodes.Callvirt, provideValue);
 				yield return Instruction.Create(OpCodes.Stloc, vardefref.VariableDefinition);
+				yield break;
 			}
-			else if (context.Variables[node].VariableType.ImplementsInterface(module.ImportReference(("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "IMarkupExtension"))))
+
+			if (context.Variables[node].VariableType.ImplementsInterface(module.ImportReference(("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "IMarkupExtension"))))
 			{
 				var acceptEmptyServiceProvider = context.Variables[node].VariableType.GetCustomAttribute(module, ("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "AcceptEmptyServiceProviderAttribute")) != null;
 				var markupExtensionType = ("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "IMarkupExtension");
@@ -327,8 +434,10 @@ namespace Xamarin.Forms.Build.Tasks
 																		   methodName: "ProvideValue",
 																		   parameterTypes: new[] { ("System.ComponentModel", "System", "IServiceProvider") }));
 				yield return Create(Stloc, vardefref.VariableDefinition);
+				yield break;
 			}
-			else if (context.Variables[node].VariableType.ImplementsInterface(module.ImportReference(("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "IValueProvider"))))
+
+			if (context.Variables[node].VariableType.ImplementsInterface(module.ImportReference(("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "IValueProvider"))))
 			{
 				var acceptEmptyServiceProvider = context.Variables[node].VariableType.GetCustomAttribute(module, ("Xamarin.Forms.Core", "Xamarin.Forms.Xaml", "AcceptEmptyServiceProviderAttribute")) != null;
 				var valueProviderType = context.Variables[node].VariableType;
@@ -361,6 +470,7 @@ namespace Xamarin.Forms.Build.Tasks
 																		   methodName: "ProvideValue",
 																		   parameterTypes: new[] { ("System.ComponentModel", "System", "IServiceProvider") }));
 				yield return Create(Stloc, vardefref.VariableDefinition);
+				yield break;
 			}
 		}
 
@@ -1509,10 +1619,12 @@ namespace Xamarin.Forms.Build.Tasks
 			var root = new FieldDefinition("root", FieldAttributes.Assembly, rootType);
 			anonType.Fields.Add(root);
 
+			var borrower = new Borrower(parentContext, parentNode);
+
 			//Fill the loadTemplate Body
 			var templateIl = loadTemplate.Body.GetILProcessor();
 			templateIl.Emit(OpCodes.Nop);
-			var templateContext = new ILContext(templateIl, loadTemplate.Body, module, parentValues)
+			var templateContext = new ILContext(templateIl, loadTemplate.Body, module, parentValues, borrower.ReserveByName)
 			{
 				Root = root,
 				DefineDebug = parentContext.DefineDebug,
@@ -1546,6 +1658,7 @@ namespace Xamarin.Forms.Build.Tasks
 			else
 				throw new InvalidProgramException();
 			parentIl.Emit(OpCodes.Stfld, root);
+			parentIl.Append(borrower.Borrow(anonType));
 
 			//SetDataTemplate
 			parentIl.Emit(Ldftn, loadTemplate);
