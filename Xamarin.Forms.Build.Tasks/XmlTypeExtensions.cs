@@ -23,6 +23,8 @@ namespace Xamarin.Forms.Build.Tasks
 				// referenced.
 				foreach (var asmRef in module.AssemblyReferences) {
 					var asmDef = module.AssemblyResolver.Resolve(asmRef);
+					if (asmDef == null)
+						continue;
 					foreach (var ca in asmDef.CustomAttributes) {
 						if (ca.AttributeType.FullName == typeof(XmlnsDefinitionAttribute).FullName) {
 							var attr = GetXmlnsDefinition(ca, asmDef);
