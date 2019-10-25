@@ -65,7 +65,7 @@ string monoSDK = IsRunningOnWindows() ? monoSDK_windows : monoSDK_macos;
 string iosSDK = IsRunningOnWindows() ? "" : iOSSDK_macos;
 string macSDK  = IsRunningOnWindows() ? "" : macSDK_macos;
 
-string[] androidSdkManagerInstalls = new [] { "platforms;android-28"}; //new [] { "platforms;android-29"};
+string[] androidSdkManagerInstalls = new [] { "platforms;android-24", "platforms;android-28"};
             
 //////////////////////////////////////////////////////////////////////
 // TASKS
@@ -98,18 +98,24 @@ Task("provision-iossdk")
     });
 
 Task("provision-androidsdk")
-    .Does(() =>
+    .Description("Install Xamarin.Android SDK")
+    .Does(async () =>
     {
-        var s = new AndroidSdkManagerToolSettings { SdkRoot = ANDROID_HOME, SkipVersionCheck = true };
+        Information ("ANDROID_HOME: {0}", ANDROID_HOME);
 
-        AcceptLicenses (s);
+        if(androidSdkManagerInstalls.Length > 0)
+        {
+            var androidSdkSettings = new AndroidSdkManagerToolSettings { 
+                SdkRoot = ANDROID_HOME,
+                SkipVersionCheck = true
+            };
 
-        AndroidSdkManagerUpdateAll (s);
+            try { AcceptLicenses (androidSdkSettings); } catch { }
 
-        AcceptLicenses (s);
-
-        AndroidSdkManagerInstall (new [] { "platforms;android-15", "platforms;android-24", "platforms;android-28", "platforms;android-29" }, s);
-        
+            AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
+        }
+        if(!String.IsNullOrWhiteSpace(androidSDK))
+            await Boots (androidSDK);
     });
 
 Task("provision-monosdk")
