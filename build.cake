@@ -51,7 +51,7 @@ string monoPatchVersion = "177";
 string monoVersion = $"{monoMajorVersion}.{monoPatchVersion}";
 
 string monoSDK_windows = $"https://download.mono-project.com/archive/{monoMajorVersion}/windows-installer/mono-{monoVersion}-x64-0.msi";
-string androidSDK_windows = "https://aka.ms/xamarin-android-commercial-d15-9-windows";
+string androidSDK_windows = "";//"https://aka.ms/xamarin-android-commercial-d15-9-windows";
 string iOSSDK_windows = "https://download.visualstudio.microsoft.com/download/pr/71f33151-5db4-49cc-ac70-ba835a9f81e2/d256c6c50cd80ec0207783c5c7a4bc2f/xamarin.visualstudio.apple.sdk.4.12.3.83.vsix";
 string macSDK_windows = "";
 
@@ -104,12 +104,13 @@ Task("provision-androidsdk")
 
         if(androidSdkManagerInstalls.Length > 0)
         {
+	    Information("Running sdk installs");
             var androidSdkSettings = new AndroidSdkManagerToolSettings { 
                 SdkRoot = ANDROID_HOME,
                 SkipVersionCheck = true
             };
 
-            try { AcceptLicenses (androidSdkSettings); } catch { }
+            AcceptLicenses (androidSdkSettings);
 
             AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
         }
