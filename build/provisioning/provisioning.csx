@@ -67,7 +67,7 @@ else
 }
 
 Item(XreItem.Java_OpenJDK_1_8_0_25);
-AndroidSdk ().ApiLevel((AndroidApiLevel)28);
+AndroidSdk ().ApiLevel((AndroidApiLevel)24);
 AndroidSdk ().ApiLevel((AndroidApiLevel)28);
 AndroidSdk ().ApiLevel((AndroidApiLevel)29);
 
