@@ -98,21 +98,23 @@ Task("provision-iossdk")
     });
 
 Task("provision-androidsdk")
-    .Does(async () =>
+    .Does(() =>
     {
         Information ("ANDROID_HOME: {0}", ANDROID_HOME);
 
         if(androidSdkManagerInstalls.Length > 0)
         {
-	    Information("Running sdk installs");
+	        Information("Running sdk installs");
             var androidSdkSettings = new AndroidSdkManagerToolSettings { 
                 SdkRoot = ANDROID_HOME,
                 SkipVersionCheck = true
             };
 
-  //          AcceptLicenses (androidSdkSettings);
+            AcceptLicenses (androidSdkSettings);
+	        Information("license accepted");
 
             AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
+	        Information("sdk installs ran");
         }
 //        if(!String.IsNullOrWhiteSpace(androidSDK))
  //           await Boots (androidSDK);
