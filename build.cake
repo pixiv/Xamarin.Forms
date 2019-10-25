@@ -110,7 +110,12 @@ Task("provision-androidsdk")
                 SkipVersionCheck = true
             };
 
-            try { AcceptLicenses (androidSdkSettings); } catch { }
+           
+            AcceptLicenses (androidSdkSettings);
+
+            AndroidSdkManagerUpdateAll (androidSdkSettings);
+
+            AcceptLicenses (androidSdkSettings);
 
             AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
         }
