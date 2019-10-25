@@ -65,7 +65,7 @@ string monoSDK = IsRunningOnWindows() ? monoSDK_windows : monoSDK_macos;
 string iosSDK = IsRunningOnWindows() ? "" : iOSSDK_macos;
 string macSDK  = IsRunningOnWindows() ? "" : macSDK_macos;
 
-string[] androidSdkManagerInstalls = new string[0]; //new [] { "platforms;android-29"};
+string[] androidSdkManagerInstalls = new [] { "platforms;android-28"}; //new [] { "platforms;android-29"};
             
 //////////////////////////////////////////////////////////////////////
 // TASKS
