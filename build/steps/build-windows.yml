@@ -75,7 +75,7 @@ jobs:
         solution: ${{ parameters.slnPath }}
         platform: '$(BuildPlatform)'
         configuration: '$(BuildConfiguration)'
-        msbuildArguments: ${{ parameters.msbuildExtraArguments }} /p:JavaSdkDirectory="$(JAVA_HOME_8_X64)"
+        msbuildArguments: ${{ parameters.msbuildExtraArguments }}
 
     - task: VSTest@2
       displayName: 'Unit Tests'
