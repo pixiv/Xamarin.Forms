@@ -35,7 +35,7 @@ jobs:
     steps:
     - checkout: self
       clean: true
-    - script: build.cmd -Target provision
+    - script: build.cmd -Target provision --verbosity=diagnostic
       displayName: 'Cake Provision'
       condition: eq(variables['provisioning'], 'false')
 
