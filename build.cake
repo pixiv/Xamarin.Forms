@@ -100,24 +100,16 @@ Task("provision-iossdk")
 Task("provision-androidsdk")
     .Does(() =>
     {
-        Information ("ANDROID_HOME: {0}", ANDROID_HOME);
+        var s = new AndroidSdkManagerToolSettings { SdkRoot = ANDROID_HOME, SkipVersionCheck = true };
 
-        if(androidSdkManagerInstalls.Length > 0)
-        {
-	        Information("Running sdk installs");
-            var androidSdkSettings = new AndroidSdkManagerToolSettings { 
-                SdkRoot = ANDROID_HOME,
-                SkipVersionCheck = true
-            };
+        AcceptLicenses (s);
 
-            AcceptLicenses (androidSdkSettings);
-	        Information("license accepted");
+        AndroidSdkManagerUpdateAll (s);
 
-            AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
-	        Information("sdk installs ran");
-        }
-//        if(!String.IsNullOrWhiteSpace(androidSDK))
- //           await Boots (androidSDK);
+        AcceptLicenses (s);
+
+        AndroidSdkManagerInstall (new [] { "platforms;android-15", "platforms;android-24", "platforms;android-28", "platforms;android-29" }, s);
+        
     });
 
 Task("provision-monosdk")
