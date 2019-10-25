@@ -110,12 +110,12 @@ Task("provision-androidsdk")
                 SkipVersionCheck = true
             };
 
-            AcceptLicenses (androidSdkSettings);
+  //          AcceptLicenses (androidSdkSettings);
 
             AndroidSdkManagerInstall (androidSdkManagerInstalls, androidSdkSettings);
         }
-        if(!String.IsNullOrWhiteSpace(androidSDK))
-            await Boots (androidSDK);
+//        if(!String.IsNullOrWhiteSpace(androidSDK))
+ //           await Boots (androidSDK);
     });
 
 Task("provision-monosdk")
